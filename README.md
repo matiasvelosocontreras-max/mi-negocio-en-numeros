@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Negocio en Números</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #fdf8f3; --cream: #f5ede0; --card: #ffffff;
+  --ink: #1c1917; --ink-soft: #78716c;
+  --green: #2d6a4f; --green-light: #d8f3dc;
+  --red: #9b2226;   --red-light: #fde8e8;
+  --amber: #92400e; --amber-light: #fef3c7;
+  --accent: #c07a3a; --border: #e8ddd3;
+  --shadow: 0 2px 16px rgba(28,25,23,0.08);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; padding:0 0 60px; }
+
+/* HERO */
+.hero { background:var(--ink); color:var(--bg); padding:36px 24px 28px; text-align:center; position:relative; overflow:hidden; }
+.hero::before { content:''; position:absolute; top:-60px; right:-60px; width:200px; height:200px; border-radius:50%; background:rgba(192,122,58,0.15); }
+.hero::after  { content:''; position:absolute; bottom:-40px; left:-30px; width:120px; height:120px; border-radius:50%; background:rgba(192,122,58,0.1); }
+.hero-emoji { font-size:40px; margin-bottom:8px; display:block; }
+.hero h1 { font-family:'Fraunces',serif; font-size:28px; font-weight:700; line-height:1.2; margin-bottom:4px; position:relative; }
+.hero p  { font-size:14px; color:rgba(253,248,243,0.6); font-weight:300; position:relative; }
+
+/* SCREENS */
+#screen-projects { display:block; }
+#screen-eerr     { display:none;  }
+
+/* PROJECT SCREEN */
+.proj-main { max-width:680px; margin:0 auto; padding:28px 16px; }
+.proj-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.proj-header h2 { font-family:'Fraunces',serif; font-size:22px; }
+.btn-new-proj { background:var(--ink); color:var(--bg); border:none; border-radius:10px; padding:9px 18px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.btn-new-proj:hover { background:#3d3530; transform:translateY(-1px); box-shadow:0 4px 12px rgba(28,25,23,0.2); }
+.new-proj-card { background:var(--card); border:1.5px dashed var(--accent); border-radius:16px; padding:20px; margin-bottom:16px; display:none; }
+.new-proj-card.show { display:block; }
+.new-proj-card label { font-size:13px; font-weight:600; color:var(--ink-soft); display:block; margin-bottom:8px; }
+.new-proj-row { display:flex; gap:8px; }
+.new-proj-card input[type=text] { flex:1; border:1.5px solid var(--border); border-radius:10px; padding:10px 14px; font-family:'DM Sans',sans-serif; font-size:14px; color:var(--ink); background:var(--bg); }
+.new-proj-card input[type=text]:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(192,122,58,0.12); }
+.btn-create { background:var(--accent); color:white; border:none; border-radius:10px; padding:10px 18px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; }
+.btn-cancel-proj { background:var(--cream); color:var(--ink-soft); border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; }
+.proj-grid { display:flex; flex-direction:column; gap:12px; }
+.proj-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:all 0.2s; box-shadow:var(--shadow); }
+.proj-card:hover { border-color:var(--accent); box-shadow:0 4px 20px rgba(192,122,58,0.12); transform:translateY(-1px); }
+.proj-card-left { display:flex; align-items:center; gap:14px; flex:1; }
+.proj-avatar { width:44px; height:44px; border-radius:12px; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.proj-name { font-family:'Fraunces',serif; font-size:17px; font-weight:700; margin-bottom:2px; }
+.proj-meta { font-size:12px; color:var(--ink-soft); }
+.proj-card-right { display:flex; align-items:center; gap:10px; }
+.proj-result-badge { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+.badge-pos   { background:var(--green-light); color:var(--green); }
+.badge-neg   { background:var(--red-light);   color:var(--red);   }
+.badge-empty { background:var(--cream); color:var(--ink-soft); }
+.btn-delete-proj { background:none; border:none; color:#ccc; cursor:pointer; font-size:16px; padding:4px 6px; border-radius:6px; transition:all 0.15s; }
+.btn-delete-proj:hover { background:var(--red-light); color:var(--red); }
+.chevron { color:var(--ink-soft); font-size:20px; }
+.empty-state { text-align:center; padding:48px 24px; color:var(--ink-soft); }
+.empty-state .e-icon { font-size:48px; margin-bottom:12px; }
+.empty-state h3 { font-family:'Fraunces',serif; font-size:20px; color:var(--ink); margin-bottom:8px; }
+.empty-state p { font-size:14px; line-height:1.6; }
+
+/* EERR SCREEN */
+.month-bar { background:var(--card); border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; gap:10px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(28,25,23,0.06); flex-wrap:wrap; }
+.month-bar-left { display:flex; align-items:center; gap:8px; }
+.btn-back { background:var(--cream); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink); cursor:pointer; }
+.btn-back:hover { background:var(--border); }
+.month-bar label { font-size:13px; font-weight:600; color:var(--ink-soft); }
+.month-bar input[type=month] { border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink); background:var(--bg); cursor:pointer; }
+.month-bar-right { display:flex; gap:6px; align-items:center; }
+.reset-btn  { background:var(--cream); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-family:'DM Sans',sans-serif; font-size:12px; color:var(--ink-soft); cursor:pointer; }
+.reset-btn:hover { background:var(--border); }
+.export-btn { background:var(--ink); border:none; border-radius:8px; padding:6px 14px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; color:var(--bg); cursor:pointer; transition:all 0.2s; }
+.export-btn:hover { background:#3d3530; transform:translateY(-1px); }
+
+/* BOTTOM ACTION BAR */
+.bottom-bar {
+  position:fixed; bottom:0; left:0; right:0; z-index:200;
+  background:var(--card); border-top:1px solid var(--border);
+  padding:12px 20px; display:none;
+  align-items:center; justify-content:center; gap:10px;
+  box-shadow:0 -4px 20px rgba(28,25,23,0.1);
+}
+.bottom-bar.visible { display:flex; }
+.btn-save-bottom {
+  flex:1; max-width:320px; background:#2d6a4f; border:none; border-radius:12px;
+  padding:14px 20px; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:700;
+  color:white; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn-save-bottom:hover { background:#235a40; transform:translateY(-1px); box-shadow:0 4px 16px rgba(45,106,79,0.3); }
+.btn-save-bottom:active { transform:translateY(0); }
+.btn-reset-bottom {
+  background:var(--cream); border:1px solid var(--border); border-radius:12px;
+  padding:14px 16px; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink-soft); cursor:pointer;
+}
+.btn-reset-bottom:hover { background:var(--border); }
+
+.history-bar { background:var(--cream); border-bottom:1px solid var(--border); padding:9px 20px; display:flex; align-items:center; gap:8px; overflow-x:auto; scrollbar-width:none; }
+.history-bar::-webkit-scrollbar { display:none; }
+.history-label { font-size:11px; font-weight:600; color:var(--ink-soft); white-space:nowrap; text-transform:uppercase; letter-spacing:0.04em; }
+.history-pill { flex-shrink:0; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:500; cursor:pointer; border:1.5px solid transparent; transition:all 0.15s; white-space:nowrap; }
+.history-pill.pos { background:var(--green-light); color:var(--green); }
+.history-pill.neg { background:var(--red-light); color:var(--red); }
+.history-pill.active { border-color:var(--accent) !important; box-shadow:0 0 0 2px rgba(192,122,58,0.2); }
+
+.main { max-width:680px; margin:0 auto; padding:22px 16px 0; }
+.progress-bar { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 18px; margin-bottom:20px; box-shadow:var(--shadow); }
+.progress-label { font-size:11px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+.steps { display:flex; gap:5px; }
+.step { flex:1; height:5px; border-radius:4px; background:var(--cream); transition:background 0.4s ease; }
+.step.done   { background:var(--accent); }
+.step.active { background:var(--accent); opacity:0.5; }
+
+.section { background:var(--card); border:1px solid var(--border); border-radius:20px; margin-bottom:18px; overflow:hidden; box-shadow:var(--shadow); transition:box-shadow 0.2s; }
+.section:hover { box-shadow:0 4px 24px rgba(28,25,23,0.1); }
+.section-header { padding:18px 20px 14px; display:flex; align-items:flex-start; gap:12px; }
+.section-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.section-title { font-family:'Fraunces',serif; font-size:18px; font-weight:700; margin-bottom:2px; }
+.section-subtitle { font-size:12px; color:var(--ink-soft); font-weight:300; line-height:1.4; }
+.s-ingreso .section-icon { background:#e8f5e9; }
+.s-costo   .section-icon { background:#fde8e8; }
+.s-gasto   .section-icon { background:#fef3c7; }
+
+.row { padding:12px 20px; border-top:1px solid var(--cream); display:grid; grid-template-columns:1fr auto; gap:14px; align-items:start; transition:background 0.15s; }
+.row:hover { background:var(--bg); }
+.row-left { display:flex; flex-direction:column; gap:2px; }
+.row-label { font-size:13px; font-weight:500; }
+.row-help  { font-size:11.5px; color:var(--ink-soft); font-weight:300; line-height:1.4; max-width:360px; }
+.row-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.row-input-wrap { position:relative; }
+.currency-prefix { position:absolute; left:9px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--ink-soft); pointer-events:none; }
+.row input[type=number] { width:130px; padding:7px 9px 7px 24px; border:1.5px solid var(--border); border-radius:10px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; color:var(--ink); background:var(--bg); text-align:right; transition:border 0.2s,box-shadow 0.2s; -moz-appearance:textfield; }
+.row input[type=number]::-webkit-outer-spin-button,
+.row input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
+.row input[type=number]:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(192,122,58,0.12); background:white; }
+.row input[type=number].has-value { border-color:#aaa; }
+.tip-bubble { display:none; font-size:11px; color:var(--amber); background:var(--amber-light); border-radius:8px; padding:3px 7px; max-width:130px; text-align:right; line-height:1.3; }
+.tip-bubble.show { display:block; }
+.subtotal-row { padding:12px 20px; display:flex; justify-content:space-between; align-items:center; background:var(--cream); border-top:1px solid var(--border); }
+.subtotal-label { font-size:12px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; }
+.subtotal-value { font-family:'Fraunces',serif; font-size:18px; font-weight:700; }
+
+.result-card { background:var(--ink); border-radius:20px; padding:24px; margin-bottom:18px; color:var(--bg); box-shadow:0 4px 28px rgba(28,25,23,0.2); }
+.result-lines { display:flex; flex-direction:column; gap:12px; margin-bottom:16px; }
+.result-line { display:flex; justify-content:space-between; align-items:center; }
+.result-line-label { font-size:12px; color:rgba(253,248,243,0.55); }
+.result-line-value { font-family:'Fraunces',serif; font-size:16px; }
+.result-divider { height:1px; background:rgba(253,248,243,0.1); }
+.result-main { display:flex; justify-content:space-between; align-items:center; margin-top:14px; }
+.result-main-label { font-family:'Fraunces',serif; font-size:15px; color:rgba(253,248,243,0.75); }
+.result-main-value { font-family:'Fraunces',serif; font-size:32px; font-weight:700; }
+.verdict { border-radius:12px; padding:14px 16px; display:flex; gap:10px; align-items:flex-start; margin-top:14px; }
+.verdict-emoji { font-size:24px; flex-shrink:0; }
+.verdict-title { font-weight:600; font-size:13px; margin-bottom:2px; }
+.verdict-text  { font-size:12px; line-height:1.5; font-weight:300; }
+.positive { color:#4ade80; } .negative { color:#f87171; } .neutral { color:var(--cream); }
+
+.kpi-section { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:20px; margin-bottom:18px; box-shadow:var(--shadow); }
+.kpi-section-title { font-family:'Fraunces',serif; font-size:17px; margin-bottom:14px; }
+.kpi-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.kpi-card { border-radius:12px; padding:14px; }
+.kpi-name  { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; opacity:0.6; margin-bottom:5px; }
+.kpi-val   { font-family:'Fraunces',serif; font-size:24px; font-weight:700; margin-bottom:3px; }
+.kpi-explain { font-size:11px; line-height:1.4; opacity:0.75; }
+.c-green { background:var(--green-light); color:var(--green); }
+.c-red   { background:var(--red-light);   color:var(--red);   }
+.c-amber { background:var(--amber-light); color:var(--amber); }
+
+.footer-note { text-align:center; font-size:11px; color:var(--ink-soft); padding:0 24px; line-height:1.6; }
+
+/* TOAST */
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--ink); color:var(--bg); border-radius:12px; padding:12px 20px; font-size:13px; font-weight:500; z-index:9999; opacity:0; transition:all 0.3s ease; white-space:nowrap; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* MODAL */
+.modal-overlay { position:fixed; inset:0; background:rgba(28,25,23,0.5); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+.modal-overlay.show { opacity:1; pointer-events:all; }
+.modal-box { background:var(--card); border-radius:20px; padding:28px; max-width:380px; width:100%; box-shadow:0 8px 40px rgba(28,25,23,0.2); }
+.modal-title { font-family:'Fraunces',serif; font-size:20px; margin-bottom:8px; }
+.modal-text  { font-size:13px; color:var(--ink-soft); margin-bottom:20px; line-height:1.5; }
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+.btn-modal-cancel  { background:var(--cream); border:1px solid var(--border); border-radius:10px; padding:9px 16px; font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; }
+.btn-modal-confirm { background:var(--red); border:none; border-radius:10px; padding:9px 16px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; color:white; cursor:pointer; }
+
+/* CONSULTING SECTION */
+.consulting-section {
+  background:var(--card); border:1px solid var(--border); border-radius:20px;
+  margin-bottom:100px; overflow:hidden; box-shadow:var(--shadow);
+}
+.consulting-header { padding:20px 22px 16px; display:flex; align-items:center; gap:12px; background: linear-gradient(135deg, #1c1917 0%, #3d2e20 100%); }
+.consulting-header-text .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent); margin-bottom:4px; }
+.consulting-header-text .title { font-family:'Fraunces',serif; font-size:19px; color:white; font-weight:700; }
+.consulting-header-text .sub   { font-size:12px; color:rgba(253,248,243,0.55); margin-top:2px; }
+.consulting-icon-wrap { width:44px; height:44px; border-radius:12px; background:rgba(192,122,58,0.2); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+.consulting-body { padding:20px 22px; }
+.consulting-empty { text-align:center; padding:28px 16px; color:var(--ink-soft); font-size:13px; line-height:1.6; }
+.consulting-empty .ce-icon { font-size:32px; margin-bottom:8px; }
+
+/* AI chat area */
+.ai-response { background:var(--cream); border-radius:14px; padding:16px 18px; margin-bottom:16px; font-size:13px; line-height:1.7; color:var(--ink); }
+.ai-response strong { color:var(--ink); }
+.ai-response ul { margin:8px 0 8px 18px; }
+.ai-response li { margin-bottom:4px; }
+.btn-consult {
+  width:100%; background:linear-gradient(135deg,#1c1917,#3d2e20); color:white; border:none;
+  border-radius:12px; padding:14px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600;
+  cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn-consult:hover { opacity:0.9; transform:translateY(-1px); }
+.btn-consult:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+.consulting-thinking { display:none; align-items:center; gap:10px; padding:14px 16px; background:var(--cream); border-radius:12px; margin-bottom:16px; }
+.consulting-thinking.show { display:flex; }
+.thinking-dots span { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); animation:bounce 1.2s infinite; margin:0 2px; }
+.thinking-dots span:nth-child(2) { animation-delay:0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay:0.4s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+/* Sheets button */
+.sheets-btn {
+  background:#1a73e8; border:none; border-radius:8px; padding:6px 14px;
+  font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; color:white;
+  cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:5px;
+}
+.sheets-btn:hover { background:#1557b0; transform:translateY(-1px); }
+.info-btn { background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:14px; padding:0 0 0 4px; line-height:1; opacity:0.5; transition:opacity 0.15s; flex-shrink:0; }
+.info-btn:hover { opacity:1; }
+.row-label-wrap { display:flex; align-items:center; }
+.popup-overlay { position:fixed; inset:0; z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(28,25,23,0.45); opacity:0; pointer-events:none; transition:opacity 0.18s; }
+.popup-overlay.show { opacity:1; pointer-events:all; }
+.popup-box { background:var(--card); border-radius:18px; padding:24px; max-width:360px; width:100%; box-shadow:0 8px 40px rgba(28,25,23,0.18); position:relative; }
+.popup-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent); margin-bottom:6px; }
+.popup-title { font-family:'Fraunces',serif; font-size:17px; font-weight:700; margin-bottom:10px; color:var(--ink); }
+.popup-body  { font-size:13px; color:var(--ink-soft); line-height:1.65; }
+.popup-body strong { color:var(--ink); font-weight:600; }
+.popup-close { position:absolute; top:14px; right:16px; background:var(--cream); border:none; border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer; color:var(--ink-soft); }
+
+/* EXPORT MODAL */
+.export-modal-box { background:var(--card); border-radius:20px; padding:28px; max-width:400px; width:100%; box-shadow:0 8px 40px rgba(28,25,23,0.2); text-align:center; }
+.export-modal-icon { font-size:44px; margin-bottom:12px; }
+.export-modal-title { font-family:'Fraunces',serif; font-size:20px; margin-bottom:8px; }
+.export-modal-text  { font-size:13px; color:var(--ink-soft); line-height:1.6; margin-bottom:16px; }
+.export-modal-hint  { background:var(--cream); border-radius:12px; padding:12px 16px; font-size:12px; color:var(--ink); line-height:1.7; margin-bottom:20px; text-align:left; }
+.export-modal-hint b { color:var(--accent); }
+.btn-modal-ok { background:var(--ink); border:none; border-radius:10px; padding:10px 28px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; color:white; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <span class="hero-emoji">🛍️</span>
+  <h1>Mi Negocio<br><em>en Números</em></h1>
+  <p id="hero-sub">Selecciona un proyecto para comenzar</p>
+</div>
+
+<!-- ══════════════ PANTALLA PROYECTOS ══════════════ -->
+<div id="screen-projects">
+  <div class="proj-main">
+    <div class="proj-header">
+      <h2>Mis Proyectos</h2>
+      <button class="btn-new-proj" onclick="showNewProjForm()">＋ Nuevo proyecto</button>
+    </div>
+
+    <div class="new-proj-card" id="new-proj-card">
+      <label>Nombre del proyecto (ej: "Tienda Ropa", "Empresa 1")</label>
+      <div class="new-proj-row">
+        <input type="text" id="new-proj-name" placeholder="Nombre del proyecto..." maxlength="40"
+               onkeydown="if(event.key==='Enter') createProject()">
+        <button class="btn-create" onclick="createProject()">Crear</button>
+        <button class="btn-cancel-proj" onclick="hideNewProjForm()">✕</button>
+      </div>
+    </div>
+
+    <div class="proj-grid"  id="proj-grid"></div>
+    <div class="empty-state" id="empty-state" style="display:none;">
+      <div class="e-icon">📂</div>
+      <h3>No tienes proyectos aún</h3>
+      <p>Crea tu primer proyecto para empezar a<br>registrar los resultados de tu negocio mes a mes.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PANTALLA EERR ══════════════ -->
+<div id="screen-eerr">
+  <div class="month-bar">
+    <div class="month-bar-left">
+      <button class="btn-back" onclick="goBack()">← Proyectos</button>
+      <label>📅</label>
+      <input type="month" id="mes" onchange="onMonthChange()">
+    </div>
+    <div class="month-bar-right">
+      <button class="export-btn" onclick="exportSheets()">📊 Google Sheets</button>
+    </div>
+  </div>
+
+  <div class="history-bar" id="history-bar">
+    <span class="history-label">Historial:</span>
+    <span id="history-pills" style="display:flex;gap:7px;align-items:center;"></span>
+  </div>
+
+  <div class="main">
+    <div class="progress-bar">
+      <div class="progress-label">
+        <span>Tu progreso al completar</span>
+        <span id="save-status" style="color:var(--accent);font-size:11px;font-weight:400;"></span>
+      </div>
+      <div class="steps" id="steps">
+        <div class="step" id="p1"></div><div class="step" id="p2"></div><div class="step" id="p3"></div><div class="step" id="p4"></div>
+        <div class="step" id="p5"></div><div class="step" id="p6"></div><div class="step" id="p7"></div><div class="step" id="p8"></div>
+      </div>
+    </div>
+
+    <!-- INGRESOS -->
+    <div class="section s-ingreso">
+      <div class="section-header">
+        <div class="section-icon">💰</div>
+        <div><div class="section-title">¿Cuánto vendiste?</div><div class="section-subtitle">Todo el dinero que entró en tu tienda este mes, antes de descontar cualquier costo.</div></div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Total cobrado a clientes</div><button class="info-btn" onclick="showPopup('p_vbrutas')">ⓘ</button></div></div>
+        <div class="row-right"><div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="v_brutas" oninput="calc()" placeholder="0" min="0"></div></div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Devoluciones o reembolsos</div><button class="info-btn" onclick="showPopup('p_devol')">ⓘ</button></div></div>
+        <div class="row-right"><div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="v_devol" oninput="calc()" placeholder="0" min="0"></div></div>
+      </div>
+      <div class="subtotal-row"><span class="subtotal-label">= Ventas netas del mes</span><span class="subtotal-value" id="v_netas">$0</span></div>
+    </div>
+
+    <!-- COSTOS -->
+    <div class="section s-costo">
+      <div class="section-header">
+        <div class="section-icon">📦</div>
+        <div><div class="section-title">¿Cuánto te costó vender?</div><div class="section-subtitle">Estos gastos existen solo porque hubo ventas. Sin ventas, no los pagarías.</div></div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Costo del producto (Dropi)</div><button class="info-btn" onclick="showPopup('p_producto')">ⓘ</button></div></div>
+        <div class="row-right"><div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="c_producto" oninput="calc()" placeholder="0" min="0"></div></div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Costo de despacho y envío</div><button class="info-btn" onclick="showPopup('p_despacho')">ⓘ</button></div></div>
+        <div class="row-right"><div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="c_despacho" oninput="calc()" placeholder="0" min="0"></div></div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Comisión de Shopify por venta</div><button class="info-btn" onclick="showPopup('p_shopify_com')">ⓘ</button></div></div>
+        <div class="row-right"><div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="c_shopify" oninput="calc()" placeholder="0" min="0"></div></div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Pérdida por pedidos rechazados</div><button class="info-btn" onclick="showPopup('p_rechazos')">ⓘ</button></div></div>
+        <div class="row-right">
+          <div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="c_rechazos" oninput="calc()" placeholder="0" min="0"></div>
+          <div class="tip-bubble" id="tip_rechazos"></div>
+        </div>
+      </div>
+      <div class="subtotal-row"><span class="subtotal-label">= Total costos de venta</span><span class="subtotal-value" id="t_cvv">$0</span></div>
+    </div>
+
+    <!-- GASTOS -->
+    <div class="section s-gasto">
+      <div class="section-header">
+        <div class="section-icon">📣</div>
+        <div><div class="section-title">¿Cuánto gastaste en operar?</div><div class="section-subtitle">Estos gastos los pagas igual aunque no vendas nada. Son los costos fijos del negocio.</div></div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Publicidad (Meta Ads)</div><button class="info-btn" onclick="showPopup('p_ads')">ⓘ</button></div></div>
+        <div class="row-right">
+          <div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="g_ads" oninput="calc()" placeholder="0" min="0"></div>
+          <div class="tip-bubble" id="tip_roas"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Plan mensual de Shopify</div><button class="info-btn" onclick="showPopup('p_shopify_plan')">ⓘ</button></div></div>
+        <div class="row-right"><div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="g_shopify" oninput="calc()" placeholder="0" min="0"></div></div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Apps y herramientas</div><button class="info-btn" onclick="showPopup('p_apps')">ⓘ</button></div></div>
+        <div class="row-right"><div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="g_apps" oninput="calc()" placeholder="0" min="0"></div></div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Diseño, fotos o contenido</div><button class="info-btn" onclick="showPopup('p_diseno')">ⓘ</button></div></div>
+        <div class="row-right"><div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="g_diseno" oninput="calc()" placeholder="0" min="0"></div></div>
+      </div>
+      <div class="row">
+        <div class="row-left"><div class="row-label-wrap"><div class="row-label">Otros gastos del negocio</div><button class="info-btn" onclick="showPopup('p_otros')">ⓘ</button></div></div>
+        <div class="row-right"><div class="row-input-wrap"><span class="currency-prefix">$</span><input type="number" id="g_otros" oninput="calc()" placeholder="0" min="0"></div></div>
+      </div>
+      <div class="subtotal-row"><span class="subtotal-label">= Total gastos operacionales</span><span class="subtotal-value" id="t_gastos">$0</span></div>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="result-card">
+      <div class="result-lines">
+        <div class="result-line"><span class="result-line-label">Ventas netas</span><span class="result-line-value" id="r_ventas">$0</span></div>
+        <div class="result-line"><span class="result-line-label">— Costos de venta</span><span class="result-line-value" id="r_cvv">$0</span></div>
+        <div class="result-line"><span class="result-line-label">= Ganancia bruta</span><span class="result-line-value" id="r_bruta">$0</span></div>
+        <div class="result-line"><span class="result-line-label">— Gastos de operación</span><span class="result-line-value" id="r_gastos">$0</span></div>
+      </div>
+      <div class="result-divider"></div>
+      <div class="result-main">
+        <div class="result-main-label">Resultado neto</div>
+        <div class="result-main-value neutral" id="r_neta">$0</div>
+      </div>
+      <div class="verdict" id="verdict">
+        <div class="verdict-emoji" id="verdict-emoji">📊</div>
+        <div>
+          <div class="verdict-title" id="verdict-title">Completa los campos para ver tu resultado</div>
+          <div class="verdict-text"  id="verdict-text">Rellena los números arriba y aquí te explicaremos cómo le fue al negocio.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-section">
+      <div class="kpi-section-title">🎯 Indicadores clave</div>
+      <div class="kpi-grid">
+        <div class="kpi-card c-green" id="kpi_mb_card"><div class="kpi-name">Margen bruto</div><div class="kpi-val" id="kpi_mb">—</div><div class="kpi-explain" id="kpi_mb_txt">De cada $100 vendidos, ¿cuánto queda tras pagar producto y envío?</div></div>
+        <div class="kpi-card c-green" id="kpi_mn_card"><div class="kpi-name">Margen neto</div><div class="kpi-val" id="kpi_mn">—</div><div class="kpi-explain" id="kpi_mn_txt">De cada $100 vendidos, ¿cuánto queda después de pagar todo?</div></div>
+        <div class="kpi-card c-amber" id="kpi_roas_card"><div class="kpi-name">ROAS (retorno ads)</div><div class="kpi-val" id="kpi_roas">—</div><div class="kpi-explain" id="kpi_roas_txt">Por cada $1 en publicidad, ¿cuántos pesos en ventas generaste?</div></div>
+        <div class="kpi-card c-amber" id="kpi_rech_card"><div class="kpi-name">Tasa de rechazo</div><div class="kpi-val" id="kpi_rech">—</div><div class="kpi-explain" id="kpi_rech_txt">¿Qué % de tus pedidos no se entregaron? Mientras más bajo, mejor.</div></div>
+      </div>
+    </div>
+
+    <!-- CONSULTING -->
+    <div class="consulting-section" id="consulting-section">
+      <div class="consulting-header">
+        <div class="consulting-icon-wrap">🤖</div>
+        <div class="consulting-header-text">
+          <div class="label">Experimental</div>
+          <div class="title">Consultor del negocio</div>
+          <div class="sub">Análisis y sugerencias basadas en tus números del mes</div>
+        </div>
+      </div>
+      <div class="consulting-body">
+        <div id="consulting-content">
+          <div class="consulting-empty">
+            <div class="ce-icon">💡</div>
+            Completa los campos del mes y presiona el botón para obtener un análisis personalizado de cómo le fue al negocio y qué mejorar.
+          </div>
+        </div>
+        <div class="consulting-thinking" id="consulting-thinking">
+          <div class="thinking-dots"><span></span><span></span><span></span></div>
+          <span style="font-size:13px;color:var(--ink-soft);">Analizando tus números...</span>
+        </div>
+        <button class="btn-consult" id="btn-consult" onclick="runConsulting()">
+          🔍 Analizar este mes
+        </button>
+      </div>
+    </div>
+  </div><!-- end .main -->
+</div><!-- end #screen-eerr -->
+
+<!-- BOTTOM ACTION BAR -->
+<div class="bottom-bar" id="bottom-bar">
+  <button class="btn-reset-bottom" onclick="resetAll()" title="Limpiar campos">↺</button>
+  <button class="btn-save-bottom"  onclick="saveMonth()">💾 Guardar mes</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL ELIMINAR -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal-box">
+    <div class="modal-title">¿Eliminar proyecto?</div>
+    <div class="modal-text" id="modal-delete-text">Se borrarán todos los datos guardados. Esta acción no se puede deshacer.</div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel"  onclick="closeModal()">Cancelar</button>
+      <button class="btn-modal-confirm" onclick="confirmDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP INFO -->
+<div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)">
+  <div class="popup-box">
+    <button class="popup-close" onclick="closePopup()">✕ Cerrar</button>
+    <div class="popup-label" id="popup-label"></div>
+    <div class="popup-title" id="popup-title"></div>
+    <div class="popup-body"  id="popup-body"></div>
+  </div>
+</div>
+
+<!-- EXPORT SUCCESS MODAL -->
+<div class="modal-overlay" id="modal-export">
+  <div class="export-modal-box">
+    <div class="export-modal-icon">📊</div>
+    <div class="export-modal-title">¡Listo para abrir!</div>
+    <div class="export-modal-text">Tu archivo fue generado. Ábrelo directamente en Google Sheets desde tu navegador, sin necesidad de instalar nada.</div>
+    <div class="export-modal-hint" id="export-hint"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn-modal-ok" id="btn-open-sheets" style="background:#1a73e8;">Abrir en Google Sheets</button>
+      <button class="btn-modal-ok" onclick="document.getElementById('modal-export').classList.remove('show')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STORAGE ──────────────────────────────
+const STORE_KEY = 'eerr_projects_v1';
+function loadAllData() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; } }
+function saveAllData(d) { try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch(e) { console.error(e); } }
+
+// ── STATE ─────────────────────────────────
+let db = loadAllData();
+let currentProj = null;
+let pendingDeleteId = null;
+const EMOJIS = ['🛍️','👗','👟','💄','🧴','📦','🏪','🎁','🧢','👜','🧸','🌿'];
+const IDS = ['v_brutas','v_devol','c_producto','c_despacho','c_shopify','c_rechazos','g_ads','g_shopify','g_apps','g_diseno','g_otros'];
+
+// ── HELPERS ───────────────────────────────
+function val(id)  { return parseFloat(document.getElementById(id).value)||0; }
+function fmt(n)   { return '$'+Math.round(n).toLocaleString('es-CL'); }
+function pct(n)   { return isNaN(n)||!isFinite(n)?'—':n.toFixed(1)+'%'; }
+function uid()    { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function setEl(id,text,cls){ const e=document.getElementById(id); e.textContent=text; if(cls) e.className=cls; }
+function colorKPI(cid,color){ document.getElementById(cid).className='kpi-card '+(color==='green'?'c-green':color==='red'?'c-red':'c-amber'); }
+function getML(ym){ const[y,m]=ym.split('-'); return new Date(y,m-1,1).toLocaleDateString('es-CL',{month:'short',year:'numeric'}); }
+function toast(msg){ const t=document.getElementById('toast'); t.innerHTML=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
+
+// ── PROJECT SCREEN ────────────────────────
+function renderProjects() {
+  const grid=document.getElementById('proj-grid'), empty=document.getElementById('empty-state');
+  const ids=Object.keys(db); grid.innerHTML='';
+  if(!ids.length){ empty.style.display='block'; return; }
+  empty.style.display='none';
+  ids.forEach(id=>{
+    const p=db[id], months=Object.keys(p.months||{}).sort(), last=months[months.length-1], ld=last?p.months[last]:null;
+    let badge='', bc='badge-empty';
+    if(ld){ const vN=(ld.v_brutas||0)-(ld.v_devol||0),cvv=(ld.c_producto||0)+(ld.c_despacho||0)+(ld.c_shopify||0)+(ld.c_rechazos||0),gOp=(ld.g_ads||0)+(ld.g_shopify||0)+(ld.g_apps||0)+(ld.g_diseno||0)+(ld.g_otros||0),net=vN-cvv-gOp; badge=fmt(net); bc=net>=0?'badge-pos':'badge-neg'; }
+    const meta=!months.length?'Sin datos aún':`${months.length} mes${months.length>1?'es':''} · último: ${getML(last)}`;
+    const c=document.createElement('div'); c.className='proj-card';
+    c.innerHTML=`<div class="proj-card-left" onclick="openProject('${id}')"><div class="proj-avatar">${p.emoji||'🛍️'}</div><div><div class="proj-name">${p.name}</div><div class="proj-meta">${meta}</div></div></div><div class="proj-card-right">${ld?`<span class="proj-result-badge ${bc}">${badge}</span>`:'<span class="proj-result-badge badge-empty">Vacío</span>'}<button class="btn-delete-proj" onclick="askDelete(event,'${id}')" title="Eliminar">🗑</button><span class="chevron" onclick="openProject('${id}')">›</span></div>`;
+    grid.appendChild(c);
+  });
+}
+
+function showNewProjForm(){ document.getElementById('new-proj-card').classList.add('show'); document.getElementById('new-proj-name').focus(); }
+function hideNewProjForm(){ document.getElementById('new-proj-card').classList.remove('show'); document.getElementById('new-proj-name').value=''; }
+function createProject(){
+  const name=document.getElementById('new-proj-name').value.trim(); if(!name){ document.getElementById('new-proj-name').focus(); return; }
+  const id=uid(), emoji=EMOJIS[Math.floor(Math.random()*EMOJIS.length)];
+  db[id]={name,emoji,months:{}}; saveAllData(db); hideNewProjForm(); renderProjects(); toast(`✅ "${name}" creado`);
+}
+function askDelete(e,id){ e.stopPropagation(); pendingDeleteId=id; document.getElementById('modal-delete-text').textContent=`Se borrarán todos los datos de "${db[id].name}". Esta acción no se puede deshacer.`; document.getElementById('modal-delete').classList.add('show'); }
+function closeModal(){ document.getElementById('modal-delete').classList.remove('show'); pendingDeleteId=null; }
+function confirmDelete(){ if(!pendingDeleteId) return; const name=db[pendingDeleteId].name; delete db[pendingDeleteId]; saveAllData(db); closeModal(); renderProjects(); toast(`🗑 "${name}" eliminado`); }
+
+// ── OPEN PROJECT ──────────────────────────
+function openProject(id){
+  currentProj=id;
+  document.getElementById('screen-projects').style.display='none';
+  document.getElementById('screen-eerr').style.display='block';
+  document.getElementById('hero-sub').textContent=db[id].name;
+  const now=new Date().toISOString().slice(0,7);
+  document.getElementById('mes').value=now;
+  renderHistoryPills(); loadMonthData(now);
+  updateBottomBar();
+}
+function goBack(){
+  document.getElementById('screen-eerr').style.display='none';
+  document.getElementById('screen-projects').style.display='block';
+  document.getElementById('hero-sub').textContent='Selecciona un proyecto para comenzar';
+  currentProj=null; renderProjects(); updateBottomBar();
+}
+
+// ── HISTORY PILLS ─────────────────────────
+function renderHistoryPills(){
+  if(!currentProj) return;
+  const pills=document.getElementById('history-pills'), months=Object.keys(db[currentProj].months||{}).sort().reverse(), cur=document.getElementById('mes').value;
+  pills.innerHTML='';
+  if(!months.length){ pills.innerHTML='<span style="font-size:12px;color:var(--ink-soft);">Sin meses guardados aún</span>'; return; }
+  months.forEach(ym=>{
+    const d=db[currentProj].months[ym], vN=(d.v_brutas||0)-(d.v_devol||0), cvv=(d.c_producto||0)+(d.c_despacho||0)+(d.c_shopify||0)+(d.c_rechazos||0), gOp=(d.g_ads||0)+(d.g_shopify||0)+(d.g_apps||0)+(d.g_diseno||0)+(d.g_otros||0), net=vN-cvv-gOp;
+    const pill=document.createElement('span'); pill.className=`history-pill ${net>=0?'pos':'neg'}${ym===cur?' active':''}`;
+    pill.textContent=getML(ym); pill.onclick=()=>{ document.getElementById('mes').value=ym; loadMonthData(ym); };
+    pills.appendChild(pill);
+  });
+}
+
+// ── LOAD / SAVE ───────────────────────────
+function loadMonthData(ym){
+  const data=(db[currentProj]?.months||{})[ym]||{};
+  IDS.forEach(id=>{ const e=document.getElementById(id); if(e) e.value=data[id]||''; });
+  document.getElementById('save-status').textContent=data._saved?`Guardado ${data._saved}`:'';
+  renderHistoryPills(); calc();
+}
+function onMonthChange(){ loadMonthData(document.getElementById('mes').value); }
+function saveMonth(){
+  if(!currentProj) return;
+  const ym=document.getElementById('mes').value, data={};
+  IDS.forEach(id=>{ data[id]=val(id); });
+  data._saved=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  if(!db[currentProj].months) db[currentProj].months={};
+  db[currentProj].months[ym]=data; saveAllData(db);
+  document.getElementById('save-status').textContent=`Guardado ${data._saved}`;
+  renderHistoryPills(); toast(`💾 ${getML(ym)} guardado`);
+}
+function resetAll(){ IDS.forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; }); document.getElementById('save-status').textContent=''; calc(); }
+
+// ── CALC ──────────────────────────────────
+function calc(){
+  const vB=val('v_brutas'),vD=val('v_devol'),vN=vB-vD;
+  const cP=val('c_producto'),cDe=val('c_despacho'),cS=val('c_shopify'),cR=val('c_rechazos'),tCVV=cP+cDe+cS+cR;
+  const gA=val('g_ads'),gS=val('g_shopify'),gAp=val('g_apps'),gDi=val('g_diseno'),gO=val('g_otros'),tG=gA+gS+gAp+gDi+gO;
+  const uB=vN-tCVV, uN=uB-tG;
+  const mb=vN>0?(uB/vN)*100:NaN, mn=vN>0?(uN/vN)*100:NaN, roas=gA>0?vN/gA:NaN, pR=vB>0?(cR/vB)*100:NaN;
+
+  setEl('v_netas',fmt(vN)); setEl('t_cvv',fmt(tCVV)); setEl('t_gastos',fmt(tG));
+  setEl('r_ventas',fmt(vN)); setEl('r_cvv',fmt(tCVV));
+  setEl('r_bruta',fmt(uB),uB>=0?'result-line-value positive':'result-line-value negative');
+  setEl('r_gastos',fmt(tG));
+  setEl('r_neta',fmt(uN),uN>=0?'result-main-value positive':'result-main-value negative');
+
+  if(vB>0){
+    let em,ti,tx,bg,col;
+    if(uN>0&&mn>=15){em='🎉';ti='¡Mes rentable!';tx=`Ganaste ${fmt(uN)} netos. Margen del ${pct(mn)}, muy sólido.`;bg='rgba(74,222,128,0.12)';col='#4ade80';}
+    else if(uN>0&&mn>=5){em='✅';ti='El negocio está generando ganancias.';tx=`Ganaste ${fmt(uN)}. Margen ajustado (${pct(mn)}), pero positivo. Clave: reducir rechazos y mejorar ROAS.`;bg='rgba(74,222,128,0.08)';col='#86efac';}
+    else if(uN>=0){em='⚖️';ti='Estás en punto de equilibrio.';tx='Casi cero ganancias. Trabaja en reducir rechazos o subir el ticket de venta.';bg='rgba(251,191,36,0.12)';col='#fbbf24';}
+    else if(uN>-50000){em='📉';ti='Mes con pérdida pequeña.';tx=`Perdiste ${fmt(Math.abs(uN))}. Normal al inicio. Revisa si los rechazos o el ROAS están fallando.`;bg='rgba(248,113,113,0.12)';col='#f87171';}
+    else{em='🚨';ti='El negocio está perdiendo dinero.';tx=`Perdiste ${fmt(Math.abs(uN))}. Antes de invertir más en ads, identifica si el problema está en costos, rechazos o ROAS.`;bg='rgba(248,113,113,0.15)';col='#f87171';}
+    document.getElementById('verdict').style.background=bg; setEl('verdict-emoji',em); setEl('verdict-title',ti); document.getElementById('verdict-title').style.color=col; setEl('verdict-text',tx);
+  } else {
+    document.getElementById('verdict').style.background='rgba(253,248,243,0.06)'; setEl('verdict-emoji','📊'); setEl('verdict-title','Completa los campos para ver tu resultado'); document.getElementById('verdict-title').style.color='rgba(253,248,243,0.6)'; setEl('verdict-text','Rellena los números arriba y aquí te explicaremos cómo le fue al negocio.');
+  }
+
+  if(!isNaN(mb)){ setEl('kpi_mb',pct(mb)); colorKPI('kpi_mb_card',mb>=35?'green':mb>=20?'amber':'red'); setEl('kpi_mb_txt',mb>=35?`Muy buen margen 💚 Por cada $100 vendidos, $${mb.toFixed(0)} son tuyos antes de pagar ads.`:mb>=20?`Margen regular. Quedan $${mb.toFixed(0)} de cada $100 antes de publicidad.`:`Margen bajo ⚠️ Solo $${mb.toFixed(0)} de cada $100. El costo es muy alto.`); } else { setEl('kpi_mb','—'); setEl('kpi_mb_txt','De cada $100 vendidos, ¿cuánto queda tras pagar producto y envío?'); }
+  if(!isNaN(mn)){ setEl('kpi_mn',pct(mn)); colorKPI('kpi_mn_card',mn>=12?'green':mn>=0?'amber':'red'); setEl('kpi_mn_txt',mn>=12?`¡Excelente! De cada $100 vendidos, $${mn.toFixed(0)} son ganancia real.`:mn>=0?`Margen ajustado. Estás ganando, pero poco. Hay que optimizar.`:`Resultado negativo. Estás perdiendo $${Math.abs(mn).toFixed(0)} de cada $100.`); } else { setEl('kpi_mn','—'); setEl('kpi_mn_txt','De cada $100 vendidos, ¿cuánto queda después de pagar todo?'); }
+  if(!isNaN(roas)&&isFinite(roas)){ setEl('kpi_roas',roas.toFixed(2)+'×'); colorKPI('kpi_roas_card',roas>=3?'green':roas>=2?'amber':'red'); setEl('kpi_roas_txt',roas>=3?`Buena publicidad 💚 Cada $1 en ads generó $${roas.toFixed(1)} en ventas.`:roas>=2?`ROAS regular. Cada $1 en ads generó $${roas.toFixed(1)} en ventas.`:`ROAS bajo ⚠️ Solo $${roas.toFixed(1)} en ventas por cada $1 en ads.`); const tr=document.getElementById('tip_roas'); if(roas<2){tr.textContent=`ROAS ${roas.toFixed(1)}× muy bajo`;tr.classList.add('show');}else tr.classList.remove('show'); } else { setEl('kpi_roas','—'); setEl('kpi_roas_txt','Por cada $1 en publicidad, ¿cuántos pesos en ventas generaste?'); document.getElementById('tip_roas').classList.remove('show'); }
+  if(!isNaN(pR)){ setEl('kpi_rech',pct(pR)); colorKPI('kpi_rech_card',pR<=15?'green':pR<=30?'amber':'red'); setEl('kpi_rech_txt',pR<=15?`Bajo 💚 Solo el ${pR.toFixed(0)}% de tus pedidos no se entregaron.`:pR<=30?`Tasa media. El ${pR.toFixed(0)}% de pedidos se pierden. Confirma por WhatsApp.`:`Alta ⚠️ El ${pR.toFixed(0)}% de pedidos no llegan. Urge mejorar esto.`); const tr=document.getElementById('tip_rechazos'); if(pR>30){tr.textContent=`⚠️ ${pR.toFixed(0)}% de rechazo`;tr.classList.add('show');}else tr.classList.remove('show'); } else { setEl('kpi_rech','—'); setEl('kpi_rech_txt','¿Qué % de tus pedidos no se entregaron? Mientras más bajo, mejor.'); document.getElementById('tip_rechazos').classList.remove('show'); }
+
+  const filled=IDS.filter(id=>val(id)>0).length;
+  for(let i=0;i<8;i++){ const s=document.getElementById('p'+(i+1)),t=(i/7)*IDS.length; s.className='step'+(filled>t+0.5?' done':filled>t?' active':''); }
+  IDS.forEach(id=>{ const e=document.getElementById(id); if(e) e.classList.toggle('has-value',val(id)>0); });
+}
+
+// ── GOOGLE SHEETS EXPORT ─────────────────
+let _sheetsBlob = null;
+
+function exportSheets(){
+  const mr=document.getElementById('mes').value||new Date().toISOString().slice(0,7);
+  const [yr,mo]=mr.split('-'), ml=new Date(yr,mo-1,1).toLocaleDateString('es-CL',{month:'long',year:'numeric'});
+  const pn=currentProj?db[currentProj].name:'Proyecto';
+  const vB=val('v_brutas'),vD=val('v_devol'),vN=vB-vD,
+        cP=val('c_producto'),cDe=val('c_despacho'),cS=val('c_shopify'),cR=val('c_rechazos'),tCVV=cP+cDe+cS+cR,
+        gA=val('g_ads'),gS=val('g_shopify'),gAp=val('g_apps'),gDi=val('g_diseno'),gO=val('g_otros'),tG=gA+gS+gAp+gDi+gO,
+        uB=vN-tCVV,uN=uB-tG,
+        mb=vN>0?(uB/vN)*100:0,mn=vN>0?(uN/vN)*100:0,
+        roas=gA>0?vN/gA:0,pR=vB>0?(cR/vB)*100:0;
+
+  const wb=XLSX.utils.book_new();
+
+  // Sheet 1 – mes actual
+  const r1=[
+    [`${pn} – ESTADO DE RESULTADOS`],[`Mes: ${ml}`],[],
+    ['INGRESOS',''],['Concepto','Monto (CLP)'],
+    ['Ventas brutas',vB],['(-) Devoluciones/reembolsos',vD],['= VENTAS NETAS',vN],[],
+    ['COSTO DE VENTAS',''],['Concepto','Monto (CLP)'],
+    ['Costo producto (Dropi)',cP],['Costo despacho',cDe],['Comisión Shopify',cS],['Pedidos rechazados',cR],['= TOTAL COSTOS',tCVV],[],
+    ['GASTOS OPERACIONALES',''],['Concepto','Monto (CLP)'],
+    ['Meta Ads',gA],['Plan Shopify',gS],['Apps/herramientas',gAp],['Diseño/contenido',gDi],['Otros',gO],['= TOTAL GASTOS',tG],[],
+    ['RESULTADO',''],
+    ['Ventas netas',vN],['(-) Costos de venta',tCVV],['= UTILIDAD BRUTA',uB],['(-) Gastos operacionales',tG],['= UTILIDAD NETA',uN],[],
+    ['KPIs',''],['Indicador','Valor'],
+    ['Margen Bruto %',+(mb.toFixed(1))],['Margen Neto %',+(mn.toFixed(1))],
+    ['ROAS',+(roas.toFixed(2))],['Tasa rechazo %',+(pR.toFixed(1))],
+  ];
+  const ws1=XLSX.utils.aoa_to_sheet(r1);
+  ws1['!cols']=[{wch:38},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Mes actual');
+
+  // Sheet 2 – historial
+  if(currentProj&&Object.keys(db[currentProj].months||{}).length>0){
+    const months=Object.keys(db[currentProj].months).sort();
+    const br=lbl=>fn=>[lbl,...months.map(m=>fn(db[currentProj].months[m]))];
+    const hs=[
+      [`${pn} – HISTORIAL`],[],
+      ['Concepto',...months.map(m=>getML(m))],[],
+      br('Ventas brutas')(d=>d.v_brutas||0),
+      br('Ventas netas')(d=>(d.v_brutas||0)-(d.v_devol||0)),
+      br('Total costos')(d=>(d.c_producto||0)+(d.c_despacho||0)+(d.c_shopify||0)+(d.c_rechazos||0)),
+      br('Total gastos')(d=>(d.g_ads||0)+(d.g_shopify||0)+(d.g_apps||0)+(d.g_diseno||0)+(d.g_otros||0)),
+      br('Utilidad bruta')(d=>{ const v=(d.v_brutas||0)-(d.v_devol||0),c=(d.c_producto||0)+(d.c_despacho||0)+(d.c_shopify||0)+(d.c_rechazos||0); return v-c; }),
+      br('UTILIDAD NETA')(d=>{ const v=(d.v_brutas||0)-(d.v_devol||0),c=(d.c_producto||0)+(d.c_despacho||0)+(d.c_shopify||0)+(d.c_rechazos||0),g=(d.g_ads||0)+(d.g_shopify||0)+(d.g_apps||0)+(d.g_diseno||0)+(d.g_otros||0); return v-c-g; }),
+    ];
+    const ws2=XLSX.utils.aoa_to_sheet(hs);
+    ws2['!cols']=[{wch:24},...months.map(()=>({wch:14}))];
+    XLSX.utils.book_append_sheet(wb,ws2,'Historial');
+  }
+
+  // Generate blob and open Google Sheets import URL
+  const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  _sheetsBlob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const blobUrl = URL.createObjectURL(_sheetsBlob);
+
+  // Also trigger download as fallback
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = `EERR_${pn.replace(/\s+/g,'_')}_${mr}.xlsx`;
+  a.click();
+
+  // Show modal
+  document.getElementById('export-hint').innerHTML =
+    `<b>Opción 1 – Google Sheets (recomendado):</b><br>
+     Presiona "Abrir en Google Sheets" para ir a drive.google.com y luego sube el archivo descargado con <b>Archivo → Importar</b>.<br><br>
+     <b>Opción 2 – Descarga directa:</b><br>
+     El archivo <b>.xlsx</b> ya se descargó. En celular búscalo en <b>Archivos → Descargas</b>. En computador está en tu carpeta <b>Descargas</b>.`;
+
+  document.getElementById('btn-open-sheets').onclick = () => {
+    window.open('https://sheets.new', '_blank');
+    document.getElementById('modal-export').classList.remove('show');
+  };
+  document.getElementById('modal-export').classList.add('show');
+}
+
+// ── BOTTOM BAR visibility ─────────────────
+function updateBottomBar() {
+  const bar = document.getElementById('bottom-bar');
+  const eerr = document.getElementById('screen-eerr');
+  if (eerr && eerr.style.display !== 'none') {
+    bar.classList.add('visible');
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+// ── CONSULTING ────────────────────────────
+async function runConsulting() {
+  const vB=val('v_brutas');
+  if(vB===0){ toast('⚠️ Completa al menos las ventas antes de analizar'); return; }
+
+  const vD=val('v_devol'),vN=vB-vD,
+        cP=val('c_producto'),cDe=val('c_despacho'),cS=val('c_shopify'),cR=val('c_rechazos'),tCVV=cP+cDe+cS+cR,
+        gA=val('g_ads'),gS=val('g_shopify'),gAp=val('g_apps'),gDi=val('g_diseno'),gO=val('g_otros'),tG=gA+gS+gAp+gDi+gO,
+        uB=vN-tCVV, uN=uB-tG,
+        mb=vN>0?(uB/vN)*100:0, mn=vN>0?(uN/vN)*100:0,
+        roas=gA>0?vN/gA:0, pR=vB>0?(cR/vB)*100:0;
+
+  const mr=document.getElementById('mes').value||new Date().toISOString().slice(0,7);
+  const [yr,mo]=mr.split('-');
+  const mesLabel=new Date(yr,mo-1,1).toLocaleDateString('es-CL',{month:'long',year:'numeric'});
+  const pn=currentProj?db[currentProj].name:'el negocio';
+
+  // Generate a text summary to copy to Claude
+  const resumen = `Analiza este estado de resultados de mi negocio dropshipping "${pn}" (${mesLabel}):
+
+• Ventas brutas: $${Math.round(vB).toLocaleString('es-CL')}
+• Ventas netas: $${Math.round(vN).toLocaleString('es-CL')}
+• Costo producto (Dropi): $${Math.round(cP).toLocaleString('es-CL')}
+• Costo despacho: $${Math.round(cDe).toLocaleString('es-CL')}
+• Comisión Shopify: $${Math.round(cS).toLocaleString('es-CL')}
+• Pérdida por rechazos: $${Math.round(cR).toLocaleString('es-CL')}
+• Total costos de venta: $${Math.round(tCVV).toLocaleString('es-CL')}
+• Meta Ads: $${Math.round(gA).toLocaleString('es-CL')}
+• Gastos operacionales totales: $${Math.round(tG).toLocaleString('es-CL')}
+• Utilidad bruta: $${Math.round(uB).toLocaleString('es-CL')} (${mb.toFixed(1)}%)
+• Utilidad neta: $${Math.round(uN).toLocaleString('es-CL')} (${mn.toFixed(1)}%)
+• ROAS: ${roas.toFixed(2)}×
+• Tasa de rechazo: ${pR.toFixed(1)}%`;
+
+  document.getElementById('consulting-content').innerHTML = `
+    <div class="ai-response">
+      <strong>📋 Tu resumen está listo para analizar</strong><br><br>
+      El análisis con IA funciona directamente en el chat de Claude. Copia el texto de abajo y pégalo en una nueva conversación con Claude en claude.ai.<br><br>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;font-family:monospace;font-size:11px;line-height:1.7;white-space:pre-wrap;color:var(--ink-soft);max-height:180px;overflow-y:auto;">${resumen}</div><br>
+      <button onclick="copyResumen()" style="background:var(--accent);color:white;border:none;border-radius:10px;padding:10px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;width:100%;" id="copy-btn">📋 Copiar resumen</button>
+    </div>`;
+  document.getElementById('btn-consult').textContent='🔄 Regenerar resumen';
+  document.getElementById('btn-consult').disabled=false;
+
+  // Store resumen globally for copy
+  window._consultingResumen = resumen;
+}
+
+function copyResumen() {
+  if(!window._consultingResumen) return;
+  navigator.clipboard.writeText(window._consultingResumen).then(()=>{
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✅ ¡Copiado!';
+    setTimeout(()=>{ btn.textContent='📋 Copiar resumen'; }, 2000);
+  }).catch(()=>{
+    // fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = window._consultingResumen;
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✅ ¡Copiado!';
+    setTimeout(()=>{ btn.textContent='📋 Copiar resumen'; }, 2000);
+  });
+}
+
+// ── POPUP INFO ────────────────────────────
+const POPUPS = {
+  p_vbrutas: { label:'Ingresos', title:'Total cobrado a clientes',
+    body:`Es el <strong>total de todos los pedidos del mes</strong>, independiente de si ya fueron entregados o no.<br><br><strong>¿Cómo calcularlo?</strong><br>Cantidad de pedidos × precio de venta.<br>Ejemplo: <strong>40 pedidos × $15.000 = $600.000</strong><br><br>Encuéntralo en Shopify → Reportes → Ventas del período.` },
+  p_devol: { label:'Ingresos', title:'Devoluciones o reembolsos',
+    body:`Si devolviste dinero a algún cliente por cualquier razón, el <strong>total de todos esos reembolsos del mes</strong> va aquí.<br><br>Si no tuviste ninguno, deja el campo en <strong>0</strong>.` },
+  p_producto: { label:'Costo de ventas', title:'Costo del producto (Dropi)',
+    body:`Es el <strong>total que le pagaste a Dropi por todos los productos vendidos en el mes</strong>. No es el costo por unidad solo, sino la suma de todos.<br><br><strong>¿Cómo calcularlo?</strong><br>Costo unitario × cantidad vendida.<br>Ejemplo: vendiste 40 unidades a $5.000 de costo cada una → <strong>40 × $5.000 = $200.000</strong><br><br>Si tienes varios productos con distintos costos, calcula cada uno y suma el total.` },
+  p_despacho: { label:'Costo de ventas', title:'Costo de despacho y envío',
+    body:`Es el <strong>total pagado en envíos de pedidos que SÍ se entregaron</strong> durante el mes.<br><br><strong>¿Cómo calcularlo?</strong><br>Costo de envío × pedidos entregados exitosamente.<br>Ejemplo: $3.500 × 35 pedidos entregados = <strong>$122.500</strong><br><br>⚠️ Los pedidos rechazados o no entregados van en el campo de abajo, <em>no aquí</em>.<br><br>Si en Dropi el despacho ya viene incluido en el precio del producto, deja este campo en <strong>0</strong>.` },
+  p_shopify_com: { label:'Costo de ventas', title:'Comisión de Shopify por venta',
+    body:`Shopify cobra un <strong>porcentaje automático de cada venta</strong> procesada a través de su plataforma de pagos.<br><br>En el plan Basic es aprox. <strong>2% por transacción</strong>. El total mensual depende de cuánto vendiste.<br><br>Encuéntralo en: Shopify Admin → Finanzas → Pagos → resumen del período.` },
+  p_rechazos: { label:'Costo de ventas', title:'Pérdida por pedidos rechazados',
+    body:`Cuando un cliente rechaza o no recibe el pedido, el producto vuelve al proveedor, pero <strong>el costo del envío de ida ya fue pagado y no se recupera</strong>. Eso es la pérdida.<br><br><strong>¿Qué poner aquí?</strong><br>Solo el costo del envío de los pedidos que <em>no</em> se entregaron.<br>Ejemplo: 8 pedidos rechazados × $3.500 de envío = <strong>$28.000</strong><br><br>El costo del producto <em>no</em> va aquí, porque Dropi te lo devuelve.` },
+  p_ads: { label:'Gastos operacionales', title:'Publicidad en Meta Ads',
+    body:`Es el <strong>total gastado en anuncios de Facebook e Instagram durante el mes</strong>.<br><br>Encuéntralo en: Meta Ads Manager → columna "Importe gastado" con filtro del mes completo.<br><br>El ROAS que se calcula abajo te muestra si ese gasto vale la pena: un ROAS de 3× significa que por cada $1 en ads entraron $3 en ventas.` },
+  p_shopify_plan: { label:'Gastos operacionales', title:'Plan mensual de Shopify',
+    body:`Es la <strong>suscripción fija mensual</strong> que pagas a Shopify para mantener tu tienda activa. Es el mismo monto todos los meses, vendas o no vendas.<br><br>El plan Basic cuesta aprox. <strong>USD $39/mes</strong> (en pesos varía según el tipo de cambio).` },
+  p_apps: { label:'Gastos operacionales', title:'Apps y herramientas',
+    body:`Suma todas las <strong>suscripciones mensuales de herramientas</strong> que uses para el negocio.<br><br>Ejemplos: plan mensual de Dropi, apps de reviews o upsell dentro de Shopify, herramientas de email marketing, etc.<br><br>Si no pagaste nada extra, deja en <strong>0</strong>.` },
+  p_diseno: { label:'Gastos operacionales', title:'Diseño, fotos o contenido',
+    body:`Si pagaste a alguien para crear material para tu tienda o tus anuncios <strong>durante este mes</strong>.<br><br>Ejemplos: diseñador gráfico, editor de video para los ads, fotógrafo de producto, redactor de textos.<br><br>Si no pagaste nada en esto este mes, deja en <strong>0</strong>.` },
+  p_otros: { label:'Gastos operacionales', title:'Otros gastos del negocio',
+    body:`Cualquier gasto real del negocio que no encaje en las categorías anteriores.<br><br>Ejemplos: dominio web, software de facturación, cursos de capacitación, etc.<br><br>Si no tienes nada que agregar, deja en <strong>0</strong>.` },
+};
+
+function showPopup(id) {
+  const p=POPUPS[id]; if(!p) return;
+  document.getElementById('popup-label').textContent=p.label;
+  document.getElementById('popup-title').textContent=p.title;
+  document.getElementById('popup-body').innerHTML=p.body;
+  document.getElementById('popup-overlay').classList.add('show');
+}
+function closePopup(e) {
+  if(!e || e.target===document.getElementById('popup-overlay') || e.currentTarget.tagName==='BUTTON') {
+    document.getElementById('popup-overlay').classList.remove('show');
+  }
+}
+
+// ── INIT ──────────────────────────────────
+renderProjects();
+</script>
+</body>
+</html>
